@@ -10,34 +10,58 @@ class EP_Optimizer:
         total_price = 0
         total_cal = 0
         for i, cat in enumerate(self.cats):
-            # Pick the meal using the index from the 'individual' list
+            # Filter menu items by category
             items = self.df[self.df['Category'] == cat]
-            meal = items.iloc[individual[i] % len(items)]
+            # Ensure the index is within range
+            idx = individual[i] % len(items)
+            meal = items.iloc[idx]
+            
             total_price += meal['Price_RM']
             total_cal += meal['Calories']
         
-        # If calories are far from target, we add a "penalty" (bad score)
+        # PENALTY: If calories are not near target, score gets worse (higher)
+        # This is how we handle constraints in EP
         penalty = abs(total_cal - self.target_cal) * 10
         return total_price + penalty
 
-    def run(self, generations=50, pop_size=20):
-        # 1. Start with random meal plans
+    def run(self, generations=100, pop_size=50, mut_rate=0.3):
+        """
+        generations: from Streamlit slider
+        pop_size: from Streamlit slider
+        mut_rate: how likely a meal is to change
+        """
+        # 1. INITIALIZATION: Start with random meal plan indices
         pop = []
         for _ in range(pop_size):
-            ind = [np.random.randint(0, 50) for _ in range(4)]
+            # Create a random list of 4 numbers (one for each meal category)
+            ind = [np.random.randint(0, 100) for _ in range(4)]
             pop.append(ind)
         
         history = []
+        
+        # 2. EVOLUTION LOOP
         for g in range(generations):
-            # 2. Mutation: Copy parents and change one meal randomly
-            offspring = [ind.copy() for ind in pop]
-            for child in offspring:
-                child[np.random.randint(0, 4)] = np.random.randint(0, 50)
+            # MUTATION: Create offspring by copying parents and mutating
+            offspring = []
+            for parent in pop:
+                child = parent.copy()
+                # EP Mutation: Every child is a slightly changed version of the parent
+                for i in range(4):
+                    if np.random.rand() < mut_rate:
+                        # Change to a new random meal index
+                        child[i] = np.random.randint(0, 100)
+                offspring.append(child)
             
-            # 3. Selection: Keep the best ones
+            # 3. SELECTION: Combine Parents + Offspring and pick the best (Tournament/Elite)
             combined = pop + offspring
+            # Sort by fitness (lowest score is best)
             combined.sort(key=lambda x: self.fitness(x))
+            
+            # Keep the top 'pop_size' individuals for the next generation
             pop = combined[:pop_size]
+            
+            # Record the best fitness score to show in the Streamlit graph
             history.append(self.fitness(pop[0]))
             
+        # Return the best individual found and the progress history
         return pop[0], history
