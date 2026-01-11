@@ -1,11 +1,10 @@
 import pandas as pd
 
 def get_clean_data(file_path):
-    # Load your group's CSV file
     df = pd.read_csv(file_path)
     
     menu = []
-    # Mapping the CSV columns to simple names
+    # Mapping the columns from your specific dataset
     categories = {
         'Breakfast Suggestion': 'Breakfast',
         'Lunch Suggestion': 'Lunch',
@@ -14,15 +13,11 @@ def get_clean_data(file_path):
     }
     
     for col, cat_name in categories.items():
-        # Get every unique food name in that category (e.g., all unique Breakfasts)
         unique_meals = df[col].unique()
-        
         for meal in unique_meals:
-            # Find all rows where this specific meal was eaten
             subset = df[df[col] == meal]
             
-            # We calculate the average and divide by 4 because the 
-            # original CSV values represent the total for the WHOLE day.
+            # Extracting averages and dividing by 4 since CSV values are daily totals
             avg_calories = subset['Calories'].mean() / 4
             avg_protein = subset['Protein'].mean() / 4
             avg_fat = subset['Fat'].mean() / 4
@@ -37,5 +32,4 @@ def get_clean_data(file_path):
                 'Price_RM': avg_price
             })
             
-    # Return the processed menu as a clean DataFrame
     return pd.DataFrame(menu)
